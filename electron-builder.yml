@@ -1,0 +1,25 @@
+appId: com.yourshop.restaurantbilling
+productName: RestaurantBilling
+directories:
+  output: dist
+  buildResources: build
+afterPack: scripts/after-pack.js
+files:
+  - src/**/*
+  - locales/**/*
+  - defaults.json
+  - package.json
+  - templates/**/*
+asarUnpack:
+  - "**/better-sqlite3/**"
+win:
+  target: nsis
+  # icon: assets/icon.ico # Add your 256x256 .ico file here
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  include: build/installer.nsh
+  language: 1033

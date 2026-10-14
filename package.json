@@ -1,0 +1,36 @@
+{
+  "name": "restaurant-billing",
+  "version": "1.0.0",
+  "description": "Non-Veg Restaurant Billing Software - Tamil Nadu - Keyboard-first",
+  "main": "src/main/main.js",
+  "author": "Restaurant Billing",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "rebuild": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "call-bind-apply-helpers": "^1.0.2",
+    "call-bound": "^1.0.4",
+    "dunder-proto": "^1.0.1",
+    "es-errors": "^1.3.0",
+    "exceljs": "^4.4.0",
+    "get-proto": "^1.0.1",
+    "gopd": "^1.2.0",
+    "i18next": "^24.2.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}

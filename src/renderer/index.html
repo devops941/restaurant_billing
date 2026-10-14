@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data: local:;" />
+    <title>Restaurant Billing | உணவக பில்லிங்</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div id="screen-login" class="screen">
+      <div class="title-bar">
+        <span>Restaurant Billing Software | உணவக பில்லிங் மென்பொருள்</span>
+      </div>
+      <div class="login-wrapper">
+        <div class="login-box">
+          <div class="login-header">
+            <h2 data-i18n="login.title">PIN Login</h2>
+            <div class="login-subtitle">Non-Veg Restaurant Billing POS</div>
+          </div>
+          <div class="login-field">
+            <label data-i18n="login.pin">Enter PIN</label>
+            <input id="login-pin" type="password" maxlength="8" autocomplete="off" autofocus placeholder="••••" />
+          </div>
+          <button type="button" id="btn-login-submit" class="btn btn-primary" data-i18n="login.submit">Login (Enter)</button>
+          <p class="hint" data-i18n="login.hint">Default Admin PIN: 1234 | Cashier PIN: 0000</p>
+          <div id="login-error" class="hidden alert-danger"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Application Screen -->
+    <div id="screen-app" class="screen hidden">
+      <!-- Title Bar -->
+      <div class="title-bar">
+        <div class="title-left">
+          <span class="app-name" data-i18n="app.title">Restaurant Billing</span>
+          <span class="title-sep">—</span>
+          <span id="title-bill" class="active-bill-tag">Bill #</span>
+        </div>
+        <div class="title-right">
+          <button type="button" id="btn-lock" class="btn-title" title="Lock / Logout (Ctrl+Q)">🔒 Lock (Ctrl+Q)</button>
+        </div>
+      </div>
+
+      <!-- Menu Bar with Accelerators -->
+      <div class="menu-bar">
+        <div class="menu-item" tabindex="0"><u>F</u>ile
+          <div class="menu-dropdown">
+            <div data-action="newBill">New Bill (F2)</div>
+            <div data-action="saveBill">Save Bill (Ctrl+Enter)</div>
+            <div data-action="excel">Excel Centre (Ctrl+E)</div>
+            <div class="menu-divider"></div>
+            <div data-action="lock">Lock / Logout (Ctrl+Q)</div>
+          </div>
+        </div>
+        <div class="menu-item" tabindex="0"><u>E</u>dit
+          <div class="menu-dropdown">
+            <div data-action="deleteLine">Delete Selected Line (Ctrl+D)</div>
+            <div data-action="undoItem">Undo Last Item (Ctrl+Z)</div>
+            <div data-action="discount">Discount (F8)</div>
+          </div>
+        </div>
+        <div class="menu-item" tabindex="0"><u>V</u>iew
+          <div class="menu-dropdown">
+            <div data-nav="billing">Billing Screen (F2)</div>
+            <div data-nav="tables">Tables Grid (F4)</div>
+            <div data-nav="menu">Menu Items (Ctrl+M)</div>
+            <div data-nav="reports">Reports (F12)</div>
+            <div data-nav="settings">Settings (Ctrl+S)</div>
+          </div>
+        </div>
+        <div class="menu-item" tabindex="0"><u>M</u>aster Files
+          <div class="menu-dropdown">
+            <div data-nav="menu">Item Master (Ctrl+M)</div>
+            <div data-action="quickTable">Add New Table</div>
+            <div data-action="quickWaiter">Add New Waiter</div>
+            <div data-action="taxSetup">Tax Master & Profiles</div>
+          </div>
+        </div>
+        <div class="menu-item" tabindex="0"><u>T</u>ools
+          <div class="menu-dropdown">
+            <div data-action="backup">Backup Now (Ctrl+B)</div>
+            <div data-action="toggleLang">Switch Tamil / English (Ctrl+L)</div>
+            <div data-action="testPrint">Test Thermal Print (Ctrl+T)</div>
+          </div>
+        </div>
+        <div class="menu-item" tabindex="0"><u>H</u>elp
+          <div class="menu-dropdown">
+            <div data-action="help">Shortcuts Cheat-Sheet (F1)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Navigation Tabs -->
+      <div class="nav-bar">
+        <button type="button" class="nav-btn active" data-nav="billing" data-i18n="nav.billing">Billing (F2)</button>
+        <button type="button" class="nav-btn" data-nav="tables" data-i18n="nav.tables">Tables (F4)</button>
+        <button type="button" class="nav-btn" data-nav="menu" data-i18n="nav.menu">Menu (Ctrl+M)</button>
+        <button type="button" class="nav-btn" data-nav="excel" data-i18n="nav.excel">Excel Centre (Ctrl+E)</button>
+        <button type="button" class="nav-btn" data-nav="reports" data-i18n="nav.reports">Reports (F12)</button>
+        <button type="button" class="nav-btn" data-nav="settings" data-i18n="nav.settings">Settings (Ctrl+S)</button>
+      </div>
+
+      <!-- BILLING VIEW -->
+      <div id="view-billing" class="view-panel">
+        <!-- Multi-Bill Tab Strip -->
+        <div class="bill-tabs-bar">
+          <div id="bill-tabs" class="bill-tabs"></div>
+          <button type="button" id="btn-add-tab" class="btn-tab-add" title="Open Another Bill (Ctrl+Tab)">+ New Bill Tab</button>
+        </div>
+
+        <!-- Action Toolbar -->
+        <div class="toolbar">
+          <button type="button" id="btn-new" class="btn-tb" data-i18n="toolbar.new">New (F2)</button>
+          <button type="button" id="btn-save" class="btn-tb btn-success" data-i18n="toolbar.save">Save (Ctrl+Enter)</button>
+          <button type="button" id="btn-payment" class="btn-tb btn-primary" data-i18n="toolbar.payment">Payment (F9)</button>
+          <button type="button" id="btn-print" class="btn-tb" data-i18n="toolbar.print">Print (F10)</button>
+          <button type="button" id="btn-kot" class="btn-tb" data-i18n="toolbar.kot">KOT (F11)</button>
+          <button type="button" id="btn-hold" class="btn-tb" data-i18n="toolbar.hold">Hold (F5)</button>
+          <button type="button" id="btn-recall" class="btn-tb" data-i18n="toolbar.recall">Recall (F6)</button>
+          <button type="button" id="btn-del-line" class="btn-tb" title="Delete Line (Ctrl+D)">Delete Line (Ctrl+D)</button>
+          <button type="button" id="btn-cancel-bill" class="btn-tb btn-danger" data-i18n="toolbar.delete">Delete Bill (Ctrl+Shift+Del)</button>
+        </div>
+
+        <div class="bill-layout">
+          <!-- Main Billing Worksheet Area -->
+          <div class="bill-main">
+            <!-- Bill Header -->
+            <div class="bill-header">
+              <div class="form-group">
+                <label data-i18n="bill.no">Bill No</label>
+                <input id="field-bill-no" class="bill-no-input" readonly />
+              </div>
+
+              <div class="form-group">
+                <label data-i18n="bill.date">Bill Date</label>
+                <input id="field-date" type="datetime-local" />
+              </div>
+
+              <div class="form-group">
+                <label data-i18n="bill.orderType">Order Type</label>
+                <select id="field-order-type">
+                  <option value="Dine-in">Dine-in (உணவகம்)</option>
+                  <option value="Takeaway">Takeaway (பார்சல்)</option>
+                  <option value="Parcel">Parcel (பார்சல்)</option>
+                  <option value="Delivery">Delivery (டெலிவரி)</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="group-table">
+                <label>
+                  <span data-i18n="bill.table">Table</span>
+                  <button type="button" id="btn-quick-table" class="btn-mini-add" title="Add Table (Ctrl+Plus)">+</button>
+                </label>
+                <select id="field-table"></select>
+              </div>
+
+              <div class="form-group" id="group-waiter">
+                <label>
+                  <span data-i18n="bill.waiter">Waiter</span>
+                  <button type="button" id="btn-quick-waiter" class="btn-mini-add" title="Add Waiter (Ctrl+Plus)">+</button>
+                </label>
+                <select id="field-waiter"></select>
+              </div>
+
+              <div class="form-group" id="group-customer">
+                <label data-i18n="bill.customer">Customer Name</label>
+                <input id="field-customer" placeholder="Name (F7)" />
+              </div>
+
+              <div class="form-group" id="group-phone">
+                <label data-i18n="bill.phone">Phone</label>
+                <input id="field-phone" type="tel" placeholder="Mobile No" />
+              </div>
+
+              <div class="form-group" id="group-address">
+                <label data-i18n="bill.address">Address</label>
+                <input id="field-address" placeholder="Delivery address" />
+              </div>
+
+              <div class="form-group span-full" id="group-remark">
+                <label data-i18n="bill.remark">Remark / Notes</label>
+                <input id="field-remark" placeholder="Special cooking instructions / remarks" />
+              </div>
+            </div>
+
+            <!-- Spreadsheet Grid -->
+            <div class="sheet-wrap">
+              <table id="billing-grid" class="excel-grid">
+                <thead>
+                  <tr>
+                    <th style="width: 130px;" data-i18n="grid.category">Category</th>
+                    <th style="width: 45px;" data-i18n="grid.sr">Sr.</th>
+                    <th style="width: 100px;" data-i18n="grid.itemNo">Item No</th>
+                    <th data-i18n="grid.itemName">Item Name</th>
+                    <th style="width: 70px;" data-i18n="grid.qty">Qty</th>
+                    <th style="width: 75px;" data-i18n="grid.unit">Unit</th>
+                    <th style="width: 90px;" data-i18n="grid.rate">Rate</th>
+                    <th style="width: 100px;" data-i18n="grid.amount">Amount</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Bottom Row Actions Hint -->
+            <div class="grid-footer-hints">
+              <span><strong>Enter:</strong> Confirm & Next</span>
+              <span><strong>Alt+↓:</strong> Item List</span>
+              <span><strong>Alt+1..9:</strong> Jump Category</span>
+              <span><strong>Insert:</strong> Add Row</span>
+              <span><strong>Ctrl+D:</strong> Delete Row</span>
+              <span><strong>Ctrl+Shift+V:</strong> Paste Excel</span>
+            </div>
+          </div>
+
+          <!-- Totals Panel -->
+          <div class="totals-box">
+            <div class="totals-title">Bill Summary | பில் சுருக்கம்</div>
+
+            <div class="tot-row">
+              <span data-i18n="bill.subtotal">Subtotal</span>
+              <span id="total-subtotal" class="tot-val">0.00</span>
+            </div>
+
+            <div class="tot-row discount-row">
+              <label class="chk-label">
+                <input type="checkbox" id="chk-discount" />
+                <span data-i18n="bill.discount">Discount (%)</span>
+              </label>
+              <input id="field-discount-pct" type="number" min="0" max="100" step="0.5" class="input-discount" disabled placeholder="%" />
+            </div>
+
+            <div class="tot-row">
+              <span>Discount Amount</span>
+              <span id="total-discount" class="tot-val">0.00</span>
+            </div>
+
+            <div class="tax-section-divider"></div>
+            <div id="tax-rows" class="tax-rows-container"></div>
+
+            <div class="tot-row" id="row-roundoff">
+              <span data-i18n="bill.roundOff">Round Off</span>
+              <span id="total-roundoff" class="tot-val">0.00</span>
+            </div>
+
+            <div class="tot-row net-total-row">
+              <span data-i18n="bill.netTotal">Net Total</span>
+              <span id="total-net" class="net-val">₹0.00</span>
+            </div>
+
+            <div id="tax-warning" class="hidden alert-warning">
+              ⚠️ Warning: IGST and CGST/SGST mixed on same bill!
+            </div>
+
+            <div class="totals-actions">
+              <button type="button" id="btn-quick-pay" class="btn btn-primary btn-block">Pay & Print (F9)</button>
+              <button type="button" id="btn-quick-kot" class="btn btn-secondary btn-block">Print KOT (F11)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLES VIEW -->
+      <div id="view-tables" class="view-panel hidden">
+        <div class="view-header">
+          <h2>Tables Management | மேசை மேலாண்மை</h2>
+          <div class="table-legend">
+            <span class="badge free">Free (காலி)</span>
+            <span class="badge occupied">Occupied (நிரம்பியது)</span>
+            <span class="badge billed">Billed (பில் ஆனது)</span>
+          </div>
+          <button type="button" id="btn-add-table-view" class="btn btn-primary">+ Add New Table</button>
+        </div>
+        <div class="table-grid" id="table-grid"></div>
+      </div>
+
+      <!-- MENU VIEW -->
+      <div id="view-menu" class="view-panel hidden">
+        <div class="view-header">
+          <h2>Menu & Items Master | உணவுப் பட்டியல்</h2>
+          <div class="header-tools">
+            <input id="menu-search-input" placeholder="Search items (code / name)..." />
+            <button type="button" id="btn-add-item" class="btn btn-primary">+ Add Item</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="menu-table" class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Category</th>
+                <th>Name (English)</th>
+                <th>Name (Tamil)</th>
+                <th>Price (₹)</th>
+                <th>Tax Profile</th>
+                <th>Unit</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EXCEL CENTRE VIEW -->
+      <div id="view-excel" class="view-panel hidden">
+        <div class="view-header">
+          <h2>Excel Centre | Excel மையம்</h2>
+          <p class="subtitle">Import and export menu, bills, and reports using Excel spreadsheets (.xlsx)</p>
+        </div>
+        <div class="excel-cards-grid">
+          <div class="card">
+            <h3>Import Menu</h3>
+            <p>Upload new menu items or update prices in bulk from Excel.</p>
+            <button type="button" id="btn-import-menu" class="btn btn-primary">Select Menu File (Ctrl+E)</button>
+          </div>
+          <div class="card">
+            <h3>Import Bills</h3>
+            <p>Import manual or past bills in bulk with duplicate resolution.</p>
+            <button type="button" id="btn-import-bills" class="btn btn-primary">Select Bills File</button>
+          </div>
+          <div class="card">
+            <h3>Export Reports</h3>
+            <p>Export daily sales, item-wise, category-wise and GST reports to Excel.</p>
+            <div class="inline-form">
+              <input id="excel-export-date" type="date" />
+              <button type="button" id="btn-export-daily" class="btn btn-secondary">Export Daily Sales</button>
+            </div>
+          </div>
+        </div>
+        <div id="excel-preview-area" class="preview-box hidden">
+          <h4>Import Result / Preview</h4>
+          <div id="excel-preview-content"></div>
+        </div>
+      </div>
+
+      <!-- REPORTS VIEW -->
+      <div id="view-reports" class="view-panel hidden">
+        <div class="view-header">
+          <h2>Sales & GST Reports | விற்பனை & ஜிஎஸ்டி அறிக்கைகள்</h2>
+          <div class="report-filters">
+            <label>From: <input id="rep-from-date" type="date" /></label>
+            <label>To: <input id="rep-to-date" type="date" /></label>
+            <button type="button" id="btn-load-report" class="btn btn-primary">Generate Report</button>
+            <button type="button" id="btn-export-full-excel" class="btn btn-secondary">Export to Excel (.xlsx)</button>
+          </div>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card"><span class="kpi-label">Total Bills</span><span id="kpi-bills" class="kpi-val">0</span></div>
+          <div class="kpi-card"><span class="kpi-label">Subtotal</span><span id="kpi-subtotal" class="kpi-val">₹0.00</span></div>
+          <div class="kpi-card"><span class="kpi-label">Discount</span><span id="kpi-discount" class="kpi-val">₹0.00</span></div>
+          <div class="kpi-card"><span class="kpi-label">Total GST</span><span id="kpi-tax" class="kpi-val">₹0.00</span></div>
+          <div class="kpi-card kpi-highlight"><span class="kpi-label">Net Sales</span><span id="kpi-sales" class="kpi-val">₹0.00</span></div>
+        </div>
+
+        <!-- Report Tabs -->
+        <div class="report-subtabs">
+          <button type="button" class="subtab-btn active" data-rtab="bills">Bills List</button>
+          <button type="button" class="subtab-btn" data-rtab="items">Item-Wise</button>
+          <button type="button" class="subtab-btn" data-rtab="categories">Category-Wise</button>
+          <button type="button" class="subtab-btn" data-rtab="payments">Payment Modes</button>
+          <button type="button" class="subtab-btn" data-rtab="gst">GST Tax Breakdown</button>
+        </div>
+
+        <div id="report-tab-content" class="report-content-table">
+          <table id="report-table" class="data-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="view-settings" class="view-panel hidden">
+        <div class="view-header">
+          <h2>Application Settings | அமைப்புகள்</h2>
+          <button type="button" id="btn-save-settings" class="btn btn-success">Save Settings (Ctrl+S)</button>
+        </div>
+
+        <div class="settings-layout">
+          <!-- Settings Sidebar Tabs -->
+          <div class="settings-nav">
+            <button type="button" class="snav-btn active" data-stab="shop">Shop Details</button>
+            <button type="button" class="snav-btn" data-stab="tax">Dynamic GST / Tax</button>
+            <button type="button" class="snav-btn" data-stab="billing">Billing Rules</button>
+            <button type="button" class="snav-btn" data-stab="printer">Printer Setup</button>
+            <button type="button" class="snav-btn" data-stab="paths">Storage & Paths</button>
+            <button type="button" class="snav-btn" data-stab="keyboard">Keyboard Shortcuts</button>
+            <button type="button" class="snav-btn" data-stab="users">Users & Roles</button>
+            <button type="button" class="snav-btn" data-stab="backup">Backup & Restore</button>
+            <button type="button" class="snav-btn" data-stab="appearance">Appearance</button>
+          </div>
+
+          <!-- Settings Tab Content -->
+          <div class="settings-content">
+            <!-- Shop Tab -->
+            <div id="stab-shop" class="stab-panel">
+              <h3>Shop Information | கடை விவரம்</h3>
+              <div class="form-grid">
+                <label>Shop Name (English)<input id="set-shop-en" /></label>
+                <label>Shop Name (Tamil)<input id="set-shop-ta" /></label>
+                <label>Address (English)<input id="set-addr-en" /></label>
+                <label>Address (Tamil)<input id="set-addr-ta" /></label>
+                <label>Phone Number<input id="set-phone" /></label>
+                <label>GSTIN<input id="set-gstin" /></label>
+                <label>FSSAI License No.<input id="set-fssai" /></label>
+                <label class="span-2">Receipt Footer Message<input id="set-footer" /></label>
+              </div>
+            </div>
+
+            <!-- Tax Setup Tab -->
+            <div id="stab-tax" class="stab-panel hidden">
+              <div class="tax-setup-header">
+                <h3>Dynamic GST Setup | வரி அமைப்புகள்</h3>
+                <div>
+                  <button type="button" id="btn-add-tax-rate" class="btn btn-secondary">+ Add Tax Rate</button>
+                  <button type="button" id="btn-add-tax-profile" class="btn btn-secondary">+ Add Tax Profile</button>
+                  <button type="button" id="btn-export-tax-excel" class="btn btn-secondary">Export Tax Settings</button>
+                  <button type="button" id="btn-import-tax-excel" class="btn btn-secondary">Import Tax Settings</button>
+                </div>
+              </div>
+
+              <div class="form-grid" style="margin-bottom: 16px;">
+                <label class="chk-label"><input type="checkbox" id="set-gst-enabled" /> GST Master Switch (On/Off)</label>
+                <label>Global Price Mode
+                  <select id="set-price-mode">
+                    <option value="exclusive">Exclusive (Tax added on top)</option>
+                    <option value="inclusive">Inclusive (Price includes GST)</option>
+                  </select>
+                </label>
+                <label>Round-Off Rule
+                  <select id="set-roundoff">
+                    <option value="none">None (Exact Paise)</option>
+                    <option value="rupee">Nearest ₹1.00</option>
+                    <option value="paise50">Nearest 50 Paise</option>
+                  </select>
+                </label>
+              </div>
+
+              <h4>Tax Profiles</h4>
+              <div id="tax-profiles-container" class="tax-cards-grid"></div>
+
+              <h4 style="margin-top: 16px;">Tax Rates Master</h4>
+              <table id="tax-rates-table" class="data-table">
+                <thead>
+                  <tr><th>ID</th><th>Rate Name</th><th>Type</th><th>Percent (%)</th><th>Effective From</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Billing Rules Tab -->
+            <div id="stab-billing" class="stab-panel hidden">
+              <h3>Billing Rules & Numbering</h3>
+              <div class="form-grid">
+                <label>Bill Prefix<input id="set-bill-prefix" placeholder="e.g. NVR-" /></label>
+                <label>Bill Digits<input id="set-bill-digits" type="number" min="3" max="8" /></label>
+                <label>Bill Number Reset Rule
+                  <select id="set-bill-reset">
+                    <option value="yearly">Yearly (Financial Year 2026-27/000123)</option>
+                    <option value="daily">Daily (20261014/000123)</option>
+                    <option value="never">Continuous / Never</option>
+                  </select>
+                </label>
+                <label>Financial Year Start Month
+                  <select id="set-fy-month">
+                    <option value="4">April (India standard)</option>
+                    <option value="1">January</option>
+                  </select>
+                </label>
+                <label>Bill No. Background Color<input id="set-bill-color" type="color" /></label>
+              </div>
+
+              <h4 style="margin-top: 16px;">Visible Fields in Bill Header</h4>
+              <div class="checkbox-grid">
+                <label><input type="checkbox" id="set-show-customer" /> Show Customer Name</label>
+                <label><input type="checkbox" id="set-show-address" /> Show Customer Address</label>
+                <label><input type="checkbox" id="set-show-table" /> Show Table</label>
+                <label><input type="checkbox" id="set-show-waiter" /> Show Waiter</label>
+                <label><input type="checkbox" id="set-show-remark" /> Show Remark</label>
+              </div>
+            </div>
+
+            <!-- Printer Setup Tab -->
+            <div id="stab-printer" class="stab-panel hidden">
+              <h3>Printer & Receipt Layout</h3>
+              <div class="form-grid">
+                <label>Paper Width
+                  <select id="set-paper-width">
+                    <option value="80">80 mm Thermal (Standard)</option>
+                    <option value="58">58 mm Thermal (Small)</option>
+                  </select>
+                </label>
+                <label>Receipt Language
+                  <select id="set-bill-lang">
+                    <option value="both">Both (Tamil + English)</option>
+                    <option value="ta">Tamil Only (தமிழ்)</option>
+                    <option value="en">English Only</option>
+                  </select>
+                </label>
+                <label>Printer Name
+                  <select id="set-printer-select"><option value="">Default Windows Printer</option></select>
+                </label>
+                <label>Print Copies<input id="set-print-copies" type="number" min="1" max="5" value="1" /></label>
+                <label class="chk-label"><input type="checkbox" id="set-auto-print" /> Auto-print on payment</label>
+              </div>
+              <div style="margin-top: 12px;">
+                <button type="button" id="btn-test-print" class="btn btn-secondary">Run Test Print (Ctrl+T)</button>
+              </div>
+            </div>
+
+            <!-- Paths Tab -->
+            <div id="stab-paths" class="stab-panel hidden">
+              <h3>Storage & Backup Folders</h3>
+              <div class="form-grid">
+                <label class="span-2">Database Data Folder
+                  <div class="input-with-button">
+                    <input id="set-data-folder" readonly />
+                    <button type="button" id="btn-pick-data" class="btn btn-secondary">Browse</button>
+                  </div>
+                </label>
+                <label class="span-2">Backup Folder
+                  <div class="input-with-button">
+                    <input id="set-backup-folder" />
+                    <button type="button" id="btn-pick-backup" class="btn btn-secondary">Browse</button>
+                  </div>
+                </label>
+                <label class="span-2">Export Folder
+                  <div class="input-with-button">
+                    <input id="set-export-folder" />
+                    <button type="button" id="btn-pick-export" class="btn btn-secondary">Browse</button>
+                  </div>
+                </label>
+                <label class="span-2">USB Backup Drive Path (Optional)
+                  <input id="set-usb-folder" placeholder="e.g. E:\Backups" />
+                </label>
+              </div>
+            </div>
+
+            <!-- Keyboard Shortcuts Tab -->
+            <div id="stab-keyboard" class="stab-panel hidden">
+              <div class="shortcut-header">
+                <h3>Keyboard Shortcuts Customization</h3>
+                <div>
+                  <button type="button" id="btn-reset-shortcuts" class="btn btn-secondary">Reset All to Default (Ctrl+Shift+R)</button>
+                </div>
+              </div>
+              <p class="subtitle">Click any shortcut to edit. Conflicts will be highlighted in red.</p>
+              <table id="shortcut-table" class="data-table">
+                <thead>
+                  <tr><th>Action</th><th>Key Combination</th><th>Reset</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Users & Roles Tab -->
+            <div id="stab-users" class="stab-panel hidden">
+              <div class="view-header" style="padding: 0 0 12px 0;">
+                <h3>Users & PIN Roles</h3>
+                <button type="button" id="btn-add-user" class="btn btn-primary">+ Add New User</button>
+              </div>
+              <table id="users-table" class="data-table">
+                <thead>
+                  <tr><th>ID</th><th>User Name</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Backup & Restore Tab -->
+            <div id="stab-backup" class="stab-panel hidden">
+              <h3>Database Backup & Recovery</h3>
+              <div style="display:flex; gap: 8px; margin-bottom: 16px;">
+                <button type="button" id="btn-backup-now" class="btn btn-primary">Take Immediate Backup (Ctrl+B)</button>
+              </div>
+              <h4>Available Backups</h4>
+              <table id="backups-table" class="data-table">
+                <thead>
+                  <tr><th>Backup File Name</th><th>Date & Time</th><th>Size</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <!-- Appearance Tab -->
+            <div id="stab-appearance" class="stab-panel hidden">
+              <h3>UI Appearance & Theme</h3>
+              <div class="form-grid">
+                <label>Theme
+                  <select id="set-theme">
+                    <option value="light">Classic POS Light (Classic)</option>
+                    <option value="dark">Dark Mode (Dark)</option>
+                    <option value="high-contrast">High Contrast (Accessibility)</option>
+                  </select>
+                </label>
+                <label>Font Size
+                  <select id="set-font-size">
+                    <option value="normal">Normal</option>
+                    <option value="medium">Medium (+10%)</option>
+                    <option value="large">Large (+20%)</option>
+                  </select>
+                </label>
+              </div>
+              <div style="margin-top: 16px; border-top: 1px solid #ccc; padding-top: 16px;">
+                <h4>Settings Backup / Restore</h4>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" id="btn-export-settings-json" class="btn btn-secondary">Export Settings Backup</button>
+                  <button type="button" id="btn-import-settings-json" class="btn btn-secondary">Import Settings Backup</button>
+                  <button type="button" id="btn-reset-defaults" class="btn btn-danger">Reset All Settings to Shipped Defaults</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Bar with Lock Key Indicators -->
+      <div class="status-bar">
+        <div class="status-left">
+          <span id="status-msg" data-i18n="status.ready">Ready</span>
+        </div>
+        <div class="status-center">
+          <span class="lock-indicator" id="lock-cap">CAP</span>
+          <span class="lock-indicator" id="lock-num">NUM</span>
+          <span class="lock-indicator" id="lock-scrl">SCRL</span>
+        </div>
+        <div class="status-right">
+          <span>User: <strong id="status-user">Admin</strong></span>
+          <span class="status-sep">|</span>
+          <span>Role: <strong id="status-role">Admin</strong></span>
+          <span class="status-sep">|</span>
+          <span id="status-lang" class="badge-lang">EN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Modal Root Container -->
+    <div id="modal-root" class="hidden"></div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
