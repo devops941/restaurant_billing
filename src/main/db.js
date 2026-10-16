@@ -197,6 +197,15 @@ CREATE TABLE IF NOT EXISTS bill_sequence (
   fy_key TEXT PRIMARY KEY,
   last_number INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE INDEX IF NOT EXISTS idx_bills_date_time ON bills(date_time);
+CREATE INDEX IF NOT EXISTS idx_bills_status ON bills(status);
+CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_taxes_bill_id ON bill_taxes(bill_id);
+CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON payments(bill_id);
+CREATE INDEX IF NOT EXISTS idx_items_category_id ON items(category_id);
+CREATE INDEX IF NOT EXISTS idx_items_code ON items(code);
+CREATE INDEX IF NOT EXISTS idx_audit_log_date ON audit_log(date_time);
 `;
 
 function getDbPath() {

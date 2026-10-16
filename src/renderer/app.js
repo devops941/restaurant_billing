@@ -554,6 +554,10 @@ async function newBill() {
   if (tab) {
     tab.bill_no = billNo;
     tab.name = billNo;
+    tab.date_time = toLocalDatetime(new Date());
+    tab.order_type = 'Dine-in';
+    tab.table_id = '';
+    tab.waiter_id = '';
     tab.customer_name = '';
     tab.customer_phone = '';
     tab.customer_address = '';
@@ -643,9 +647,10 @@ function openPaymentModal() {
         </div>
       </div>
       <div id="payment-split-box" class="hidden" style="margin-top: 10px;">
-        <label>Cash Amount: <input id="pay-split-cash" type="number" value="${totalPayable}" style="width: 100%;" /></label>
-        <label>UPI Amount: <input id="pay-split-upi" type="number" value="0" style="width: 100%;" /></label>
-        <label>Card Amount: <input id="pay-split-card" type="number" value="0" style="width: 100%;" /></label>
+        <label style="display:block; margin-bottom:4px;">Cash Amount (₹): <input id="pay-split-cash" type="number" min="0" value="${totalPayable}" style="width: 100%; padding:4px;" /></label>
+        <label style="display:block; margin-bottom:4px;">UPI Amount (₹): <input id="pay-split-upi" type="number" min="0" value="0" style="width: 100%; padding:4px;" /></label>
+        <label style="display:block; margin-bottom:8px;">Card Amount (₹): <input id="pay-split-card" type="number" min="0" value="0" style="width: 100%; padding:4px;" /></label>
+        <button type="button" id="btn-confirm-split" class="btn btn-success" style="width:100%; font-size:16px; padding:8px;">Confirm Split Payment</button>
       </div>
     `;
 
@@ -653,6 +658,10 @@ function openPaymentModal() {
       const recInput = root.querySelector('#pay-received');
       const changeEl = root.querySelector('#pay-change');
       let chosenMode = 'Cash';
+
+      // Ensure modal input has focus — grid render() may fire a rAF to steal it back
+      // Use double rAF to run after grid's pending rAF completes
+      requestAnimationFrame(() => requestAnimationFrame(() => recInput?.focus()));
 
       const updateChange = () => {
         const rec = parseFloat(recInput.value) || 0;
@@ -662,49 +671,88 @@ function openPaymentModal() {
       recInput.addEventListener('input', updateChange);
       updateChange();
 
+      const doPayAndClose = async (mode, splitPayments) => {
+        const res = await saveBill(true, mode, splitPayments);
+        if (res) {
+          closeModal(); // closeModal handles removing _payModalKeyListener
+          const s = await window.api.getSettings();
+          if (s.auto_print !== false) {
+            await window.api.printBill(res.billId);
+          }
+          await newBill();
+        }
+      };
+
       // Mode buttons
+      const highlightMode = (mode) => {
+        root.querySelectorAll('.btn-pay-mode').forEach((b) => {
+          b.style.outline = b.dataset.mode === mode ? '3px solid #fff' : '';
+          b.style.boxShadow = b.dataset.mode === mode ? '0 0 0 3px #0056b3' : '';
+        });
+      };
+      highlightMode(chosenMode);
+
       root.querySelectorAll('.btn-pay-mode').forEach((btn) => {
         btn.addEventListener('click', async () => {
           chosenMode = btn.dataset.mode;
+          highlightMode(chosenMode);
           if (chosenMode === 'Split') {
             root.querySelector('#payment-standard-box').classList.add('hidden');
             root.querySelector('#payment-split-box').classList.remove('hidden');
+            root.querySelector('#pay-split-cash').focus();
             return;
           }
-
-          let split = null;
-          const res = await saveBill(true, chosenMode, split);
-          if (res) {
-            closeModal();
-            const s = await window.api.getSettings();
-            if (s.auto_print !== false) {
-              await window.api.printBill(res.billId);
-            }
-            await newBill();
-          }
+          await doPayAndClose(chosenMode, null);
         });
       });
 
-      // Quick numbers 1, 2, 3, 4
-      const handleNumKey = async (e) => {
-        if (e.key === '1') {
-          e.preventDefault();
-          root.querySelector('[data-mode="Cash"]').click();
-        } else if (e.key === '2') {
-          e.preventDefault();
-          root.querySelector('[data-mode="UPI"]').click();
-        } else if (e.key === '3') {
-          e.preventDefault();
-          root.querySelector('[data-mode="Card"]').click();
-        } else if (e.key === '4') {
-          e.preventDefault();
-          root.querySelector('[data-mode="Split"]').click();
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          root.querySelector(`[data-mode="${chosenMode}"]`).click();
+      // Split payment confirm button
+      root.querySelector('#btn-confirm-split')?.addEventListener('click', async () => {
+        const cashAmt = parseFloat(root.querySelector('#pay-split-cash').value) || 0;
+        const upiAmt = parseFloat(root.querySelector('#pay-split-upi').value) || 0;
+        const cardAmt = parseFloat(root.querySelector('#pay-split-card').value) || 0;
+        const splitTotal = cashAmt + upiAmt + cardAmt;
+        if (Math.abs(splitTotal - totalPayable) > 0.5) {
+          alert(`Split amounts total ₹${splitTotal.toFixed(2)} does not match bill ₹${totalPayable.toFixed(2)}`);
+          return;
         }
+        const splitPayments = [];
+        if (cashAmt > 0) splitPayments.push({ mode: 'Cash', amount: cashAmt });
+        if (upiAmt > 0) splitPayments.push({ mode: 'UPI', amount: upiAmt });
+        if (cardAmt > 0) splitPayments.push({ mode: 'Card', amount: cardAmt });
+        await doPayAndClose('Split', splitPayments);
+      });
+
+      // Keyboard: 1/2/3/4 = select mode, Enter = confirm, ←/→ = cycle modes
+      const PAY_MODES = ['Cash', 'UPI', 'Card', 'Split'];
+      _payModalKeyListener = async (e) => {
+        const tag = document.activeElement?.tagName;
+
+        // Arrow keys cycle payment modes even when amount input is focused
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const idx = PAY_MODES.indexOf(chosenMode);
+          chosenMode = PAY_MODES[e.key === 'ArrowRight' ? (idx + 1) % PAY_MODES.length : (idx - 1 + PAY_MODES.length) % PAY_MODES.length];
+          highlightMode(chosenMode);
+          return;
+        }
+
+        // Enter always confirms current mode (from input or elsewhere)
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          root.querySelector(`[data-mode="${chosenMode}"]`)?.click();
+          return;
+        }
+
+        // Number shortcuts only when not typing in an input
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+        if (e.key === '1') { e.preventDefault(); root.querySelector('[data-mode="Cash"]')?.click(); }
+        else if (e.key === '2') { e.preventDefault(); root.querySelector('[data-mode="UPI"]')?.click(); }
+        else if (e.key === '3') { e.preventDefault(); root.querySelector('[data-mode="Card"]')?.click(); }
+        else if (e.key === '4') { e.preventDefault(); root.querySelector('[data-mode="Split"]')?.click(); }
       };
-      document.addEventListener('keydown', handleNumKey, { once: true });
+      document.addEventListener('keydown', _payModalKeyListener);
     });
   });
 }
@@ -1523,6 +1571,11 @@ function registerShortcuts() {
     document.getElementById('field-customer').focus();
   });
   onAction('discount', () => focusDiscount());
+  onAction('searchItem', () => {
+    showView('billing');
+    grid.active.c = 2;
+    grid.render();
+  });
   onAction('jumpCategory', (catNum) => {
     showView('billing');
     grid.focusCategory(catNum);
@@ -1593,7 +1646,13 @@ function showModal(title, contentHtml, onMount) {
   onMount?.(root);
 }
 
+let _payModalKeyListener = null;
+
 function closeModal() {
+  if (_payModalKeyListener) {
+    document.removeEventListener('keydown', _payModalKeyListener);
+    _payModalKeyListener = null;
+  }
   const root = document.getElementById('modal-root');
   root.classList.add('hidden');
   root.innerHTML = '';

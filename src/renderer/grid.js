@@ -4,12 +4,13 @@ import { itemDisplayName, getLang } from './i18n.js';
 // Readonly columns: 1: Sr, 3: ItemName, 5: Unit, 7: Amount
 const COLS = ['category', 'sr', 'itemNo', 'itemName', 'qty', 'unit', 'rate', 'amount'];
 const EDITABLE_COLS = [0, 2, 4, 6];
+const MIN_ROWS = 20;
 
 export class BillingGrid {
   constructor(tableEl, onChange) {
     this.table = tableEl;
     this.onChange = onChange;
-    this.rows = [this.emptyRow()];
+    this.rows = Array.from({ length: MIN_ROWS }, () => this.emptyRow());
     this.active = { r: 0, c: 2 }; // Start in Item No
     this.categories = [];
     this.suggestEl = null;
@@ -83,6 +84,10 @@ export class BillingGrid {
       }));
   }
 
+  padToMinRows() {
+    while (this.rows.length < MIN_ROWS) this.rows.push(this.emptyRow());
+  }
+
   setLines(lines) {
     this.rows = lines && lines.length
       ? lines.map((l) => ({
@@ -96,7 +101,8 @@ export class BillingGrid {
           rate: Number(l.rate) || 0,
           amount: (Number(l.qty) || 1) * (Number(l.rate) || 0),
         }))
-      : [this.emptyRow()];
+      : [];
+    this.padToMinRows();
     this.active = { r: 0, c: 2 };
     this.saveState();
     this.render();
@@ -104,7 +110,7 @@ export class BillingGrid {
   }
 
   clear() {
-    this.rows = [this.emptyRow()];
+    this.rows = Array.from({ length: MIN_ROWS }, () => this.emptyRow());
     this.active = { r: 0, c: 2 };
     this.saveState();
     this.render();
@@ -112,12 +118,16 @@ export class BillingGrid {
   }
 
   deleteCurrentRow() {
-    if (this.rows.length <= 1) {
-      this.rows = [this.emptyRow()];
-    } else {
+    const row = this.rows[this.active.r];
+    // Only delete if row has data; otherwise just clear the row
+    if (row && row.item_id) {
       this.rows.splice(this.active.r, 1);
       if (this.active.r >= this.rows.length) this.active.r = this.rows.length - 1;
+    } else {
+      // Empty row — clear it (no splice to keep MIN_ROWS)
+      this.rows[this.active.r] = this.emptyRow();
     }
+    this.padToMinRows();
     this.saveState();
     this.render();
     this.notify();
@@ -127,7 +137,7 @@ export class BillingGrid {
     for (let i = this.rows.length - 1; i >= 0; i--) {
       if (this.rows[i].item_id) {
         this.rows.splice(i, 1);
-        if (this.rows.length === 0) this.rows = [this.emptyRow()];
+        this.padToMinRows();
         this.saveState();
         this.render();
         this.notify();
@@ -163,6 +173,7 @@ export class BillingGrid {
     tbody.innerHTML = '';
     this.rows.forEach((row, rIdx) => {
       const tr = document.createElement('tr');
+      if (rIdx === this.active.r) tr.classList.add('row-active');
       COLS.forEach((col, cIdx) => {
         const td = document.createElement('td');
         const isActive = rIdx === this.active.r && cIdx === this.active.c;
@@ -171,16 +182,24 @@ export class BillingGrid {
         if (col === 'sr') {
           td.classList.add('cell-readonly');
           td.textContent = String(rIdx + 1);
+          td.style.cursor = 'pointer';
+          td.addEventListener('click', () => { this.active = { r: rIdx, c: 2 }; this.render(); });
         } else if (col === 'amount') {
           td.classList.add('cell-readonly');
           row.amount = (Number(row.qty) || 0) * (Number(row.rate) || 0);
           td.textContent = row.amount.toFixed(2);
+          td.style.cursor = 'pointer';
+          td.addEventListener('click', () => { this.active = { r: rIdx, c: 6 }; this.render(); });
         } else if (col === 'itemName') {
           td.classList.add('cell-readonly');
           td.textContent = row.item_name || '';
+          td.style.cursor = 'pointer';
+          td.addEventListener('click', () => { this.active = { r: rIdx, c: 2 }; this.render(); });
         } else if (col === 'unit') {
           td.classList.add('cell-readonly');
           td.textContent = row.unit || '';
+          td.style.cursor = 'pointer';
+          td.addEventListener('click', () => { this.active = { r: rIdx, c: 4 }; this.render(); });
         } else if (this.isEditable(col, rIdx, cIdx)) {
           const input = this.createInput(col, row, rIdx, cIdx);
           td.appendChild(input);
@@ -195,12 +214,31 @@ export class BillingGrid {
         }
         tr.appendChild(td);
       });
+
+      // Per-row delete button — deletes THIS row regardless of active cell
+      const delTd = document.createElement('td');
+      delTd.className = 'cell-row-del';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-row-del';
+      delBtn.title = 'Delete row (Ctrl+D)';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.active.r = rIdx;
+        this.deleteCurrentRow();
+      });
+      delTd.appendChild(delBtn);
+      tr.appendChild(delTd);
+
       tbody.appendChild(tr);
     });
 
     const activeCell = tbody.querySelector('.cell-active input, .cell-active select');
     if (activeCell) {
       requestAnimationFrame(() => {
+        // Never steal focus when a modal is open
+        const modalRoot = document.getElementById('modal-root');
+        if (modalRoot && !modalRoot.classList.contains('hidden')) return;
         activeCell.focus();
         if (activeCell.select && activeCell.tagName === 'INPUT') activeCell.select();
       });
@@ -473,9 +511,8 @@ export class BillingGrid {
         // From Item No -> move to Qty
         this.active.c = 4;
       } else if (cIdx === 4) {
-        // From Qty -> advance to new row!
-        this.ensureNextRow(rIdx);
-        this.active = { r: rIdx + 1, c: 2 }; // Jump straight to Item No of next row
+        // From Qty -> move to Rate (so user can confirm/edit price)
+        this.active.c = 6;
       } else if (cIdx === 6) {
         // From Rate -> advance to new row
         this.ensureNextRow(rIdx);
@@ -508,11 +545,13 @@ export class BillingGrid {
 
     // Arrow navigation when not browsing suggestions
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && !this.suggestEl) {
-      const isInput = input.tagName === 'INPUT';
-      if (isInput) {
+      if (input.tagName === 'INPUT' && input.type === 'text') {
+        // Text inputs: let cursor move within field first before navigating cells
         if (e.key === 'ArrowLeft' && input.selectionStart > 0) return;
         if (e.key === 'ArrowRight' && input.selectionEnd < input.value.length) return;
       }
+      // Number inputs (qty/rate): selectionStart is null in all browsers,
+      // so all 4 arrow keys navigate cells directly — no cursor-position check needed.
 
       const dr = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
       const dc = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
@@ -548,9 +587,10 @@ export class BillingGrid {
   }
 
   ensureNextRow(rIdx) {
-    if (rIdx === this.rows.length - 1) {
+    if (rIdx >= this.rows.length - 1) {
       this.rows.push(this.emptyRow());
     }
+    this.padToMinRows();
   }
 
   notify(full = true) {

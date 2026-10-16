@@ -184,9 +184,9 @@ function saveBill(payload, userId) {
       insPay.run(billId, payload.payment_mode || 'Cash', totals.total);
     }
 
-    // Update table status
+    // Free the table after bill is paid
     if (payload.table_id) {
-      db.prepare("UPDATE tables SET status = 'billed', current_bill_id = ? WHERE id = ?").run(billId, payload.table_id);
+      db.prepare("UPDATE tables SET status = 'free', current_bill_id = NULL WHERE id = ?").run(payload.table_id);
     }
 
     audit(userId, 'bill_save', JSON.stringify({ billId, billNo, total: totals.total, cashier: cashierName }));

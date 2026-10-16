@@ -121,7 +121,7 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     const cfg = loadAppConfig();
     if (!cfg.dataFolder) {
       cfg.dataFolder = getDefaultDataFolder();
@@ -132,7 +132,7 @@ if (!gotTheLock) {
     initDb(defaults);
 
     try {
-      ensureTemplates(path.join(app.getAppPath(), 'templates'));
+      await ensureTemplates(path.join(app.getAppPath(), 'templates'));
     } catch (err) {
       console.warn('Template generation warning:', err);
     }

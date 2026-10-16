@@ -410,6 +410,37 @@ input, select, textarea, button {
   background: #eef5ff;
 }
 
+/* Active row highlight */
+.excel-grid tbody tr.row-active {
+  background: #dce8ff;
+}
+.excel-grid tbody tr.row-active .cell-readonly {
+  background: #dce8ff;
+}
+
+/* Per-row delete button */
+.cell-row-del {
+  width: 36px;
+  text-align: center;
+  padding: 0 !important;
+  background: transparent;
+}
+.btn-row-del {
+  background: none;
+  border: none;
+  color: #cc0000;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.excel-grid tbody tr:hover .btn-row-del,
+.excel-grid tbody tr.row-active .btn-row-del {
+  opacity: 1;
+}
+
 .excel-grid input, .excel-grid select {
   width: 100%;
   height: 100%;
@@ -1145,4 +1176,237 @@ body.theme-dark .excel-grid td.cell-active {
 body.theme-dark .data-table th {
   background: #333;
   color: #fff;
+}
+
+/* ── Dark Mode: Menu Bar ── */
+body.theme-dark .menu-bar {
+  background: #2d2d2d;
+  border-color: #444;
+}
+body.theme-dark .menu-item {
+  color: #e0e0e0;
+}
+body.theme-dark .menu-item:hover,
+body.theme-dark .menu-item:focus {
+  background: #0e5fd8;
+  color: #fff;
+}
+body.theme-dark .menu-dropdown {
+  background: #2d2d2d;
+  border-color: #555;
+  color: #e0e0e0;
+}
+body.theme-dark .menu-dropdown div {
+  color: #e0e0e0;
+}
+body.theme-dark .menu-dropdown div:hover {
+  background: #0e5fd8;
+  color: #fff;
+}
+body.theme-dark .menu-divider {
+  background: #444;
+}
+
+/* ── Dark Mode: Navigation Tabs ── */
+body.theme-dark .nav-bar {
+  background: #1e1e1e;
+  border-color: #555;
+}
+body.theme-dark .nav-btn {
+  background: #2d2d2d;
+  color: #ccc;
+  border-color: #555;
+}
+body.theme-dark .nav-btn.active {
+  background: #252526;
+  color: #fff;
+  border-color: #555;
+  border-bottom-color: #252526;
+}
+body.theme-dark .nav-btn:hover:not(.active) {
+  background: #383838;
+}
+
+/* ── Dark Mode: Toolbar ── */
+body.theme-dark .toolbar {
+  background: #1e1e1e;
+  border-color: #444;
+}
+body.theme-dark .btn-tb {
+  background: #2d2d2d;
+  color: #e0e0e0;
+  border-color: #555;
+}
+body.theme-dark .btn-tb:hover {
+  background: #383838;
+}
+body.theme-dark .btn-tb:active {
+  background: #1a1a1a;
+}
+
+/* ── Dark Mode: Bill Tabs Strip ── */
+body.theme-dark .bill-tabs-bar {
+  background: #1e1e1e;
+  border-color: #444;
+}
+body.theme-dark .bill-tab {
+  background: #2a2a2a;
+  color: #bbb;
+  border-color: #555;
+}
+body.theme-dark .bill-tab.active {
+  background: #252526;
+  color: #fff;
+  border-bottom-color: #252526;
+}
+body.theme-dark .btn-tab-add {
+  color: #aaa;
+  border-color: #555;
+}
+body.theme-dark .btn-tab-add:hover {
+  background: #333;
+  color: #fff;
+}
+body.theme-dark .tab-close {
+  color: #888;
+}
+
+/* ── Dark Mode: Suggestion Dropdown ── */
+body.theme-dark .suggest-list {
+  background: #252526;
+  border-color: #555;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+body.theme-dark .suggest-item {
+  color: #e0e0e0;
+  border-color: #3a3a3a;
+}
+body.theme-dark .suggest-item.active,
+body.theme-dark .suggest-item:hover {
+  background: #0e5fd8;
+  color: #fff;
+}
+
+/* ── Dark Mode: Status Bar ── */
+body.theme-dark .status-bar {
+  background: #1e1e1e;
+  color: #aaa;
+  border-color: #444;
+}
+body.theme-dark .lock-indicator {
+  background: #3a3a3a;
+  color: #888;
+}
+body.theme-dark .lock-indicator.lock-active {
+  background: #28a745;
+  color: #fff;
+}
+body.theme-dark .status-sep {
+  color: #555;
+}
+
+/* ── Dark Mode: Bill Header ── */
+body.theme-dark .bill-header {
+  background: #1e1e1e;
+  border-color: #444;
+}
+body.theme-dark .bill-header input,
+body.theme-dark .bill-header select {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+body.theme-dark .bill-header label {
+  color: #aaa;
+}
+
+/* ── Dark Mode: Modal ── */
+body.theme-dark .modal {
+  background: #252526;
+  color: #e0e0e0;
+  border-color: #555;
+}
+body.theme-dark .modal h2 {
+  border-color: #444;
+  color: #e0e0e0;
+}
+body.theme-dark .modal-actions {
+  border-color: #444;
+}
+body.theme-dark .modal input,
+body.theme-dark .modal select,
+body.theme-dark .modal textarea {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+body.theme-dark .modal label {
+  color: #ccc;
+}
+
+/* ── Dark Mode: Active Row ── */
+body.theme-dark .excel-grid tbody tr.row-active {
+  background: #1b3050;
+}
+body.theme-dark .excel-grid tbody tr.row-active .cell-readonly {
+  background: #1b3050;
+}
+
+/* ── Dark Mode: Login Box ── */
+body.theme-dark .login-box {
+  background: #252526;
+  border-color: #555;
+  color: #e0e0e0;
+}
+body.theme-dark .login-box input {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+body.theme-dark .login-subtitle {
+  color: #aaa;
+}
+
+/* ── Dark Mode: Data Table rows ── */
+body.theme-dark .data-table td {
+  border-color: #444;
+  color: #e0e0e0;
+}
+body.theme-dark .data-table tr:nth-child(even) {
+  background: #2a2a2a;
+}
+body.theme-dark .data-table tr:hover {
+  background: #2d3f5a;
+}
+
+/* ── Dark Mode: View Header ── */
+body.theme-dark .view-header h2,
+body.theme-dark .view-header h3 {
+  color: #e0e0e0;
+}
+
+/* ── Dark Mode: Settings Nav ── */
+body.theme-dark .snav-btn {
+  color: #ccc;
+}
+body.theme-dark .snav-btn.active {
+  background: #0e5fd8;
+  color: #fff;
+}
+body.theme-dark .snav-btn:hover:not(.active) {
+  background: #333;
+  color: #fff;
+}
+
+/* ── Dark Mode: Btn row delete ── */
+body.theme-dark .btn-row-del {
+  color: #ff6b6b;
+}
+
+/* ── Dark Mode: Sheet wrap scrollbar ── */
+body.theme-dark .sheet-wrap::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+body.theme-dark .sheet-wrap::-webkit-scrollbar-thumb {
+  background: #444;
 }

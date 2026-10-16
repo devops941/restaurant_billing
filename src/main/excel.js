@@ -388,7 +388,7 @@ async function exportGstSummary(filePath, fromDate, toDate) {
   return { count: rows.length };
 }
 
-function ensureTemplates(templatesDir) {
+async function ensureTemplates(templatesDir) {
   if (!fs.existsSync(templatesDir)) fs.mkdirSync(templatesDir, { recursive: true });
 
   const menuPath = path.join(templatesDir, 'Menu_Template.xlsx');
@@ -399,7 +399,7 @@ function ensureTemplates(templatesDir) {
     ms.addRow(['101', 'Biriyani', 'பிரியாணி', 'Chicken Biriyani', 'சிக்கன் பிரியாணி', 180, 'Restaurant 5%', 'Plate']);
     ms.addRow(['102', 'Biriyani', 'பிரியாணி', 'Mutton Biriyani', 'மட்டன் பிரியாணி', 260, 'Restaurant 5%', 'Plate']);
     ms.addRow(['201', 'Fish', 'மீன்', 'Fish Fry', 'மீன் வறுவல்', 220, 'Restaurant 5%', 'Plate']);
-    menuWb.xlsx.writeFile(menuPath);
+    await menuWb.xlsx.writeFile(menuPath);
   }
 
   const billsPath = path.join(templatesDir, 'Bill_Entry_Template.xlsx');
@@ -410,7 +410,7 @@ function ensureTemplates(templatesDir) {
     bs.addRow(['14-10-2026', '1', 'Dine-in T3', '101', 2, 180, 0, 'Cash']);
     bs.addRow(['14-10-2026', '1', 'Dine-in T3', '201', 1, 220, 0, 'Cash']);
     bs.addRow(['14-10-2026', '2', 'Parcel', '102', 1, 260, 10, 'UPI']);
-    billsWb.xlsx.writeFile(billsPath);
+    await billsWb.xlsx.writeFile(billsPath);
   }
 }
 

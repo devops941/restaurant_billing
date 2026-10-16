@@ -145,9 +145,22 @@ function registerIpc() {
   });
 
   ipcMain.handle('shortcuts:resetAll', () => {
-    getDb().prepare('DELETE FROM shortcuts').run();
-    const { initDb } = require('./db');
-    initDb();
+    const db = getDb();
+    db.prepare('DELETE FROM shortcuts').run();
+    // Re-seed defaults without creating a new DB connection
+    const defaults = [
+      ['help', 'F1'], ['newBill', 'F2'], ['searchItem', 'F3'], ['selectTable', 'F4'],
+      ['holdBill', 'F5'], ['recallBill', 'F6'], ['customer', 'F7'], ['discount', 'F8'],
+      ['payment', 'F9'], ['printBill', 'F10'], ['printKOT', 'F11'], ['reports', 'F12'],
+      ['toggleLang', 'Control+L'], ['menuManager', 'Control+M'], ['excel', 'Control+E'],
+      ['settings', 'Control+S'], ['backup', 'Control+B'], ['deleteLine', 'Control+D'],
+      ['undoItem', 'Control+Z'], ['lock', 'Control+Q'], ['saveBill', 'Control+Enter'],
+      ['deleteBill', 'Control+Shift+Delete'], ['closeBill', 'Control+W'],
+      ['reprintBill', 'Control+P'], ['testPrint', 'Control+T'],
+      ['nextTab', 'Control+Tab'], ['prevTab', 'Control+Shift+Tab'],
+    ];
+    const ins = db.prepare('INSERT INTO shortcuts (action_id, key_combo) VALUES (?, ?)');
+    defaults.forEach(([a, k]) => ins.run(a, k));
     return { ok: true };
   });
 
@@ -415,16 +428,30 @@ function registerIpc() {
     return [];
   });
 
+  async function doPrint(html, silent) {
+    const w = new BrowserWindow({
+      show: false,
+      width: 400,
+      height: 800,
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+    try {
+      await w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+      // Small delay to allow page render to complete before printing
+      await new Promise((res) => setTimeout(res, 300));
+      return await print.printHtml(w, html, silent);
+    } finally {
+      w.close();
+    }
+  }
+
   ipcMain.handle('print:bill', async (_, billId) => {
     try {
       const bill = billing.getBill(billId);
       if (!bill) return { ok: false, error: 'Bill not found' };
       const settings = getAllSettings();
       const html = print.buildBillHtml(bill, settings, getSetting('bill_language', 'both'));
-      const w = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
-      await w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-      const res = await print.printHtml(w, html, true);
-      w.close();
+      const res = await doPrint(html, true);
       audit(currentUser?.id, 'print_bill', bill.bill_no);
       return res;
     } catch (err) {
@@ -436,10 +463,7 @@ function registerIpc() {
   ipcMain.handle('print:kot', async (_, kotPayload) => {
     try {
       const html = print.buildKotHtml(kotPayload);
-      const w = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
-      await w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-      const res = await print.printHtml(w, html, true);
-      w.close();
+      const res = await doPrint(html, true);
       audit(currentUser?.id, 'print_kot', JSON.stringify(kotPayload.table || ''));
       return res;
     } catch (err) {
@@ -474,11 +498,8 @@ function registerIpc() {
       settings,
       settings.bill_language || 'both'
     );
-    const w = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
-    await w.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-    await print.printHtml(w, html, false);
-    w.close();
-    return { ok: true };
+    const res = await doPrint(html, false);
+    return res;
   });
 }
 
