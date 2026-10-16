@@ -107,7 +107,7 @@ input, select, textarea, button {
   font-size: 12px;
 }
 
-.menu-item:hover, .menu-item:focus {
+.menu-item:hover, .menu-item.menu-open {
   background: #316ac5;
   color: #fff;
   outline: none;
@@ -126,8 +126,7 @@ input, select, textarea, button {
   color: #000;
 }
 
-.menu-item:hover .menu-dropdown,
-.menu-item:focus-within .menu-dropdown {
+.menu-item.menu-open .menu-dropdown {
   display: block;
 }
 
@@ -1187,7 +1186,7 @@ body.theme-dark .menu-item {
   color: #e0e0e0;
 }
 body.theme-dark .menu-item:hover,
-body.theme-dark .menu-item:focus {
+body.theme-dark .menu-item.menu-open {
   background: #0e5fd8;
   color: #fff;
 }

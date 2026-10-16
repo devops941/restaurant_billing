@@ -123,6 +123,31 @@ function fillSelect(id, rows, valKey, labelKey, optional) {
 }
 
 function bindUi() {
+  // Click-to-open menu bar (replaces CSS hover)
+  const menuBarItems = document.querySelectorAll('.menu-bar > .menu-item');
+  menuBarItems.forEach((item) => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.menu-dropdown')) {
+        // Click inside dropdown — close menu, let action bubble normally
+        item.classList.remove('menu-open');
+        return;
+      }
+      // Click on menu label — toggle open
+      e.stopPropagation();
+      const isOpen = item.classList.contains('menu-open');
+      menuBarItems.forEach((m) => m.classList.remove('menu-open'));
+      if (!isOpen) item.classList.add('menu-open');
+    });
+  });
+  // Close all menus when clicking outside
+  document.addEventListener('click', () => {
+    menuBarItems.forEach((m) => m.classList.remove('menu-open'));
+  });
+  // Escape closes open menu
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') menuBarItems.forEach((m) => m.classList.remove('menu-open'));
+  });
+
   // Navigation
   document.querySelectorAll('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => showView(btn.dataset.nav));
@@ -800,7 +825,7 @@ async function recallHeldBill() {
       ${held
         .map(
           (h) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px; border-bottom: 1px solid #ddd;">
+        <div class="recall-row" style="display:flex; justify-content:space-between; align-items:center; padding: 8px; border-bottom: 1px solid #ddd;">
           <span><strong>${h.label}</strong> <small style="color:#777">(${new Date(h.created_at).toLocaleTimeString()})</small></span>
           <button type="button" class="btn btn-primary btn-recall-item" data-id="${h.id}">Recall</button>
         </div>`
@@ -827,6 +852,30 @@ async function recallHeldBill() {
         }
       });
     });
+    // keyboard nav for list rows
+    const rows = [...root.querySelectorAll('.recall-row')];
+    rows.forEach((row) => {
+      row.setAttribute('tabindex', '0');
+      row.style.cursor = 'pointer';
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          row.querySelector('.btn-recall-item')?.click();
+        }
+      });
+      row.addEventListener('focus', () => { row.style.background = '#dce8ff'; });
+      row.addEventListener('blur', () => { row.style.background = ''; });
+    });
+    root.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const idx = rows.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.key === 'ArrowDown') rows[Math.min(idx + 1, rows.length - 1)].focus();
+      else rows[Math.max(idx - 1, 0)].focus();
+    });
+    if (rows.length) rows[0].focus();
   });
 }
 
@@ -1644,14 +1693,61 @@ function showModal(title, contentHtml, onMount) {
     if (e.target.classList.contains('modal-overlay')) closeModal();
   });
   onMount?.(root);
+  const modalEl = root.querySelector('.modal');
+  if (_modalNavHandler) document.removeEventListener('keydown', _modalNavHandler);
+  _modalNavHandler = (e) => {
+    const activeEl = document.activeElement;
+    if (!modalEl || !modalEl.contains(activeEl)) return;
+    const tag = activeEl.tagName;
+
+    if (e.key === 'Enter' && (tag === 'INPUT' || tag === 'TEXTAREA')) {
+      const primaryBtn = modalEl.querySelector('.btn-success') || modalEl.querySelector('.btn-primary:not(.btn-modal-close)');
+      if (primaryBtn) { e.preventDefault(); primaryBtn.click(); }
+      return;
+    }
+
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    const focusables = [...modalEl.querySelectorAll(
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+    )].filter((el) => el.offsetParent !== null);
+    if (!focusables.length) return;
+    const idx = focusables.indexOf(activeEl);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusables[idx < 0 || idx >= focusables.length - 1 ? 0 : idx + 1]?.focus();
+    } else {
+      e.preventDefault();
+      focusables[idx <= 0 ? focusables.length - 1 : idx - 1]?.focus();
+    }
+  };
+  document.addEventListener('keydown', _modalNavHandler);
+
+  // Auto-focus first input/select; fallback to first button (never the Close button)
+  requestAnimationFrame(() => {
+    const firstInput = modalEl.querySelector(
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    );
+    if (firstInput) {
+      firstInput.focus();
+      if (firstInput.select) firstInput.select();
+    } else {
+      const firstBtn = modalEl.querySelector('button:not(.btn-modal-close):not([disabled])');
+      firstBtn?.focus();
+    }
+  });
 }
 
 let _payModalKeyListener = null;
+let _modalNavHandler = null;
 
 function closeModal() {
   if (_payModalKeyListener) {
     document.removeEventListener('keydown', _payModalKeyListener);
     _payModalKeyListener = null;
+  }
+  if (_modalNavHandler) {
+    document.removeEventListener('keydown', _modalNavHandler);
+    _modalNavHandler = null;
   }
   const root = document.getElementById('modal-root');
   root.classList.add('hidden');
